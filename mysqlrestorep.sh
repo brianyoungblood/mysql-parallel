@@ -5,11 +5,12 @@ DATABASE=$2
 DIRECTORY=$3
 HOST=$4
 PORT=$5
+KEYS=$6
 
 # Validate our arugments and ensure that GNU parallel is available.
 if [[ -z $DIRECTORY ]]
 then
-  echo "Usage: mysqlrestorep.sh <user> <database> <directory> [host] [port]"
+  echo "Usage: mysqlrestorep.sh <user> <database> <directory> [host] [port] [ssl-keys]"
   exit 1
 fi
 
@@ -21,6 +22,14 @@ fi
 if [[ -z $PORT ]]
 then
   PORT=3306
+fi
+
+if [[ -z $KEYS ]]
+then
+  unset KEYS
+  else
+  KEYS=" $KEYS"
+  echo $KEYS
 fi
 
 PARALLEL=`type -P parallel`
@@ -45,11 +54,12 @@ echo -n "Please enter your mysql password for $USER: "
 read -s PASS
 echo ""
 
+echo "Trying connection.."
 if [ -z "$PASS" ]
 then
-  time ls -S *.sql.bz2 | $PARALLEL -I, echo "Importing table ,." \&\& $BZIP2 -kcd , \| mysql -u $USER -h$HOST -P$PORT $DATABASE
+  time ls -S *.sql.bz2 | $PARALLEL -I, echo "Importing table ,." \&\& $BZIP2 -kcd , \| mysql -u $USER -h$HOST -P$PORT $KEYS $DATABASE
 else
-  time ls -S *.sql.bz2 | $PARALLEL -I, echo "Importing table ,." \&\& $BZIP2 -kcd , \| mysql -u $USER -h$HOST -P$PORT -p"'$PASS'" $DATABASE
+  time ls -S *.sql.bz2 | $PARALLEL -I, echo "Importing table ,." \&\& $BZIP2 -kcd , \| mysql -u $USER -h$HOST -P$PORT -p"'$PASS'" $KEYS $DATABASE
 fi
 
 cd -

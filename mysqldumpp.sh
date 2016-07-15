@@ -4,11 +4,12 @@ USER=$1
 DATABASE=$2
 HOST=$3
 PORT=$4
+KEYS=$5
 
 # Validate our arugments and ensure that GNU parallel is available.
 if [[ -z $DATABASE ]]
 then
-  echo "Usage: mysqldumpp.sh <user> <database> [host] [port]"
+  echo "Usage: mysqldumpp.sh <user> <database> [host] [port] [ssl-keys]"
   exit 1
 fi
 
@@ -20,6 +21,14 @@ fi
 if [[ -z $PORT ]]
 then
   PORT=3306
+fi
+
+if [[ -z $KEYS ]]
+then
+  unset KEYS
+  else
+  KEYS=" $KEYS"
+  echo $KEYS
 fi
 
 PARALLEL=`type -P parallel`
@@ -42,12 +51,14 @@ echo -n "Please enter your mysql password for $USER: "
 read -s PASS
 echo ""
 
+
+echo "Trying connection.."
 # Fetch all of the tables in the database.
 if [ -z "$PASS" ]
 then
-  TABLES=`mysql --batch --skip-column-names -u $USER -h$HOST -P$PORT -e 'SHOW TABLES;' $DATABASE`
+  TABLES=`mysql --batch --skip-column-names -u $USER -h$HOST -P$PORT $KEYS -e 'SHOW TABLES;' $DATABASE`
 else
-  TABLES=`mysql --batch --skip-column-names -u $USER --password="$PASS" -h$HOST -P$PORT -e 'SHOW TABLES;' $DATABASE`
+  TABLES=`mysql --batch --skip-column-names -u $USER --password="$PASS" -h$HOST -P$PORT $KEYS -e 'SHOW TABLES;' $DATABASE`
 fi
 
 if [[ -z $TABLES ]]
@@ -65,8 +76,8 @@ mkdir -p "$DESTINATION"
 if [ -z "$PASS" ]
 then
   time echo $TABLES |
-  $PARALLEL -d ' ' --trim=rl -I ,  echo "Dumping table ,." \&\& mysqldump -C -u$USER -h$HOST -P$PORT --skip-lock-tables --add-drop-table $DATABASE  , \| $BZIP2 \> $DESTINATION/,.sql.bz2
+  $PARALLEL -d ' ' --trim=rl -I ,  echo "Dumping table ,." \&\& mysqldump -C -u$USER -h$HOST -P$PORT $KEYS --skip-lock-tables --add-drop-table $DATABASE  , \| $BZIP2 \> $DESTINATION/,.sql.bz2
 else
   time echo $TABLES |
-  $PARALLEL -d ' ' --trim=rl -I ,  echo "Dumping table ,." \&\& mysqldump -C -u$USER -p"'$PASS'" -h$HOST -P$PORT --skip-lock-tables --add-drop-table $DATABASE  , \| $BZIP2 \> $DESTINATION/,.sql.bz2
+  $PARALLEL -d ' ' --trim=rl -I ,  echo "Dumping table ,." \&\& mysqldump -C -u$USER -p"'$PASS'" -h$HOST -P$PORT $KEYS --skip-lock-tables --add-drop-table $DATABASE  , \| $BZIP2 \> $DESTINATION/,.sql.bz2
 fi
