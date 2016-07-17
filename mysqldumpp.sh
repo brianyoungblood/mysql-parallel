@@ -4,12 +4,13 @@ USER=$1
 DATABASE=$2
 HOST=$3
 PORT=$4
-KEYS=$5
+DESTINATION=$5
+KEYS=$6
 
 # Validate our arugments and ensure that GNU parallel is available.
 if [[ -z $DATABASE ]]
 then
-  echo "Usage: mysqldumpp.sh <user> <database> [host] [port] [ssl-keys]"
+  echo "Usage: mysqldumpp.sh <user> <database> [host] [port] [destination] [ssl-keys]"
   exit 1
 fi
 
@@ -22,6 +23,14 @@ if [[ -z $PORT ]]
 then
   PORT=3306
 fi
+
+if [[ -z $DESTINATION ]]
+then
+DATE=`date "+%Y-%m-%d-%H%M"`
+DESTINATION="$DATABASE-$DATE"
+fi
+
+mkdir -p "$DESTINATION"
 
 if [[ -z $KEYS ]]
 then
@@ -67,10 +76,7 @@ then
   exit 1
 fi
 
-DATE=`date "+%Y-%m-%d-%H%M"`
-DESTINATION="$DATABASE-$DATE"
 
-mkdir -p "$DESTINATION"
 
 # Run one job for each table we are dumping.
 if [ -z "$PASS" ]
